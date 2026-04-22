@@ -2,9 +2,6 @@ name: Packaging(Linux)
 
 on:
   push:
-    branches:
-      - master
-      - fix*
     paths-ignore:
       - 'README.md'
       - 'LICENSE'
@@ -18,6 +15,9 @@ on:
       - 'data/translations/*.ts'
 
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 env:
   PRODUCT: flameshot
@@ -127,6 +127,14 @@ jobs:
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
           overwrite: true
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
 
   rpm-pack:
     name: Build rpm on ${{ matrix.dist.name }} ${{ matrix.dist.arch }}
@@ -254,6 +262,20 @@ jobs:
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm.sha256sum
           overwrite: true
 
+      - name: Upload fedora rpm to GitHub Release
+        if: matrix.dist.os == 'fedora' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ github.workspace }}/build/*.rpm
+
+      - name: Upload opensuse rpm to GitHub Release
+        if: matrix.dist.os == 'opensuse-leap' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm.sha256sum
+
   appimage-pack:
     name: Build appimage on ${{ matrix.config.name }}
     runs-on: ubuntu-latest
@@ -368,145 +390,11 @@ jobs:
             ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
           overwrite: true
 
-  flatpak-pack:
-    name: Build flatpak on ubuntu 24.04
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Source code
-        if: github.event_name == 'push'
-        uses: actions/checkout@v4
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
-          fetch-depth: 0
-          ref: master
-      - name: Checkout Source code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          files: |
+            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage
+            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
 
-      - name: Checkout Source code
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Set env & Print flameshot version
-        shell: bash
-        run: |
-          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
-          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
-          git_hash=$(git rev-parse --short HEAD)
-          ver_info=${last_committed_tag}+git${git_revno}.${git_hash}
-          echo "=======FLAMESHOT VERSION========"
-          echo ${last_committed_tag:1}
-          echo "Details: ${ver_info}"
-          echo "================================"
-          # This will allow to build pre-preleases without git tag
-          # echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
-          echo "VERSION=$(cat CMakeLists.txt |grep 'set.*(.*FLAMESHOT_VERSION' | sed 's/[^0-9.]*//' |sed 's/)//g')" >> $GITHUB_ENV
-          echo "VER_INFO=${ver_info}" >> $GITHUB_ENV
-          echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
-
-      - name: Update flatpak manifest with commit SHA
-        run: |
-          git_hash=$(git rev-parse HEAD)
-          sed -i "s/branch: master/commit: ${git_hash}/" packaging/flatpak/org.flameshot.Flameshot.yml
-          echo "=======FLATPAK MANIFEST========"
-          cat packaging/flatpak/org.flameshot.Flameshot.yml
-          echo "==============================="
-
-      - name: Setup flatpak
-        run: |
-          sudo apt-get -y -qq update
-          sudo apt-get install -y flatpak flatpak-builder
-      - name: Setup Flathub
-        run: |
-          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak install -y --noninteractive flathub org.kde.Sdk//6.9 org.kde.Platform//6.9
-      - name: Packaging flatpak
-        run: |
-          BUNDLE="org.flameshot.Flameshot_${VERSION}_x86_64.flatpak"
-          MANIFEST_PATH=$GITHUB_WORKSPACE/packaging/flatpak/org.flameshot.Flameshot.yml
-          RUNTIME_REPO="https://flathub.org/repo/flathub.flatpakrepo"
-          APP_ID="org.flameshot.Flameshot"
-          BRANCH="master"
-
-          flatpak-builder --user --disable-rofiles-fuse --repo=repo --force-clean flatpak_app ${MANIFEST_PATH} --install-deps-from=flathub
-          flatpak build-bundle repo ${BUNDLE} --runtime-repo=${RUNTIME_REPO} ${APP_ID} ${BRANCH}
-          mv $GITHUB_WORKSPACE/org.flameshot.Flameshot_${VERSION}_x86_64.flatpak $GITHUB_WORKSPACE/org.flameshot.Flameshot-${VERSION}.x86_64.flatpak
-      - name: SHA256Sum of flatpak package
-        run: |
-          cd "$GITHUB_WORKSPACE/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/'!"; exit 11 ; }
-          sha256sum org.flameshot.Flameshot-${VERSION}.x86_64.flatpak | tee org.flameshot.Flameshot-${VERSION}.x86_64.flatpak.sha256sum
-      - name: Artifact Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-flatpak-x86_64
-          path: |
-            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak
-            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
-          overwrite: true
-
-  snap-pack:
-    name: Build snap on ubuntu latest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source code
-        if: github.event_name == 'push'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: master
-      - name: Checkout Source code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-
-
-      - name: Checkout Source code
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-
-      - name: Set env & Print flameshot version
-        shell: bash
-        run: |
-          last_committed_tag=$(git tag -l --sort=-v:refname | head -1)
-          git_revno=$(git rev-list $(git describe --tags --abbrev=0)..HEAD --count)
-          git_hash=$(git rev-parse --short HEAD)
-          ver_info=${last_committed_tag}+git${git_revno}.${git_hash}
-          echo "=======FLAMESHOT VERSION========"
-          echo ${last_committed_tag:1}
-          echo "Details: ${ver_info}"
-          echo "================================"
-          # This will allow to build pre-preleases without git tag
-          # echo "VERSION=${last_committed_tag:1}" >> $GITHUB_ENV
-          echo "VERSION=$(cat CMakeLists.txt |grep 'set.*(.*FLAMESHOT_VERSION' | sed 's/[^0-9.]*//' |sed 's/)//g')" >> $GITHUB_ENV
-          echo "VER_INFO=${ver_info}" >> $GITHUB_ENV
-          echo "GIT_HASH=${git_hash}" >> $GITHUB_ENV
-
-      - name: Packaging snap
-        uses: snapcore/action-build@v1
-        id: snapcraft
-
-      - name: Rename snap name
-        shell: bash
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/build
-          cp ${{ steps.snapcraft.outputs.snap }} $GITHUB_WORKSPACE/build/${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap
-      - name: SHA256Sum of snap package
-        run: |
-          cd "$GITHUB_WORKSPACE/build/" || { >&2 echo "Cannot cd to '$GITHUB_WORKSPACE/build/'!"; exit 11 ; }
-          sha256sum ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap | tee ${PRODUCT}-${VERSION}-${RELEASE}.amd64.snap.sha256sum
-      - name: Artifact Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PRODUCT }}-${{ env.VER_INFO }}-artifact-snap-x86_64
-          path: |
-            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
-            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
-          overwrite: true
