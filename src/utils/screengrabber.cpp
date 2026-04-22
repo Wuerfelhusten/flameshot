@@ -213,6 +213,7 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     ok = true;
     int wid = 0;
     QPixmap screenshot;
+    const bool hdrFix = ConfigHandler().hdrFix();
 
 #if defined(Q_OS_MACOS)
     QScreen* currentScreen = QGuiAppCurrentScreen().currentScreen();
@@ -225,7 +226,7 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     screenshot = currentScreen->grabWindow(
       wid, geom.x(), geom.y(), geom.width(), geom.height());
     screenshot.setDevicePixelRatio(currentScreen->devicePixelRatio());
-    if (ConfigHandler().hdrFix()) {
+    if (hdrFix) {
         screenshot = applyHdrFix(screenshot);
     }
     return screenshot;
@@ -259,7 +260,7 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
         if (preSelectedMonitor < screens.size()) {
             m_selectedMonitor = preSelectedMonitor;
             QPixmap cropped = cropToMonitor(screenshot, preSelectedMonitor);
-            if (ConfigHandler().hdrFix()) {
+            if (hdrFix) {
                 cropped = applyHdrFix(cropped);
             }
             return cropped;
@@ -267,7 +268,7 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     }
 
     QPixmap result = selectMonitorAndCrop(screenshot, ok);
-    if (ok && ConfigHandler().hdrFix()) {
+    if (ok && hdrFix) {
         result = applyHdrFix(result);
     }
     return result;
@@ -277,6 +278,7 @@ QPixmap ScreenGrabber::grabFullDesktop(bool& ok)
 {
     ok = true;
     QPixmap screenshot;
+    const bool hdrFix = ConfigHandler().hdrFix();
 
 #if defined(Q_OS_MACOS)
     // On macOS, composite all screens into a single pixmap.
@@ -321,7 +323,7 @@ QPixmap ScreenGrabber::grabFullDesktop(bool& ok)
     screenshot = windowsScreenshot(0);
 #endif
 
-    if (ok && ConfigHandler().hdrFix()) {
+    if (ok && hdrFix) {
         screenshot = applyHdrFix(screenshot);
     }
     return screenshot;
@@ -616,9 +618,11 @@ QPixmap ScreenGrabber::applyHdrFix(const QPixmap& pixmap)
 {
     QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
 
-    // Build a lookup table for gamma = 2.2 correction.
-    // This converts linear-light HDR values to gamma-encoded sRGB values,
-    // correcting the "too bright" appearance on HDR-enabled screens.
+    // Build a lookup table applying gamma = 2.2 to each channel value.
+    // On HDR-enabled screens, screenshots may be captured with linear-light
+    // values that appear too bright when interpreted as gamma-encoded sRGB.
+    // Applying pow(x, 2.2) maps the captured values to a perceptually correct
+    // range for SDR/sRGB display, effectively darkening the overly-bright result.
     uchar lut[256];
     for (int i = 0; i < 256; ++i) {
         lut[i] = static_cast<uchar>(qRound(qPow(i / 255.0, 2.2) * 255.0));
