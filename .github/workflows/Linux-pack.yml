@@ -2,9 +2,6 @@ name: Packaging(Linux)
 
 on:
   push:
-    branches:
-      - master
-      - fix*
     paths-ignore:
       - 'README.md'
       - 'LICENSE'
@@ -18,6 +15,9 @@ on:
       - 'data/translations/*.ts'
 
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 env:
   PRODUCT: flameshot
@@ -127,6 +127,14 @@ jobs:
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
           overwrite: true
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.${{ matrix.dist.name }}.${{ matrix.dist.arch }}.deb.sha256sum
 
   rpm-pack:
     name: Build rpm on ${{ matrix.dist.name }} ${{ matrix.dist.arch }}
@@ -254,6 +262,20 @@ jobs:
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm.sha256sum
           overwrite: true
 
+      - name: Upload fedora rpm to GitHub Release
+        if: matrix.dist.os == 'fedora' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ github.workspace }}/build/*.rpm
+
+      - name: Upload opensuse rpm to GitHub Release
+        if: matrix.dist.os == 'opensuse-leap' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-lp${{ matrix.dist.symbol }}.${{ matrix.dist.arch }}.rpm.sha256sum
+
   appimage-pack:
     name: Build appimage on ${{ matrix.config.name }}
     runs-on: ubuntu-latest
@@ -368,6 +390,14 @@ jobs:
             ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
           overwrite: true
 
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage
+            ${{ github.workspace }}/Flameshot-*.x86_64.AppImage.sha256sum
+
   flatpak-pack:
     name: Build flatpak on ubuntu 24.04
     runs-on: ubuntu-24.04
@@ -377,7 +407,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: master
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
@@ -448,6 +477,14 @@ jobs:
             ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
           overwrite: true
 
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak
+            ${{ github.workspace }}/org.flameshot.Flameshot-*.x86_64.flatpak.sha256sum
+
   snap-pack:
     name: Build snap on ubuntu latest
     runs-on: ubuntu-latest
@@ -457,7 +494,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: master
       - name: Checkout Source code
         if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
@@ -510,3 +546,11 @@ jobs:
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
             ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
           overwrite: true
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap
+            ${{ github.workspace }}/build/${{ env.PRODUCT }}-*-${{ env.RELEASE }}.amd64.snap.sha256sum
