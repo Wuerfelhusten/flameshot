@@ -61,6 +61,7 @@ private slots:
     void setJpegQuality(int v);
     void setReverseArrow(bool checked);
     void setInsecurePixelate(bool checked);
+    void setHdrFix(bool checked);
 #if !defined(Q_OS_MACOS)
     void captureActiveMonitorChanged(bool checked);
 #endif
@@ -105,6 +106,7 @@ private:
     void initJpegQuality();
     void initReverseArrow();
     void initInsecurePixelate();
+    void initHdrFix();
 #if !defined(Q_OS_MACOS)
     void initCaptureActiveMonitor();
 #endif
@@ -159,6 +161,7 @@ private:
     QSpinBox* m_jpegQuality;
     QCheckBox* m_reverseArrow;
     QCheckBox* m_insecurePixelate;
+    QCheckBox* m_hdrFix;
 #if !defined(Q_OS_MACOS)
     QCheckBox* m_captureActiveMonitor;
 #endif

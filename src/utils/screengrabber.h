@@ -39,6 +39,7 @@ private:
     QPixmap cropToMonitor(const QPixmap& fullScreenshot, int monitorIndex);
     QPixmap windowsScreenshot(int wid);
     QPixmap x11LegacyScreenshot();
+    static QPixmap applyHdrFix(const QPixmap& pixmap);
 
     DesktopInfo m_info;
     QPixmap Screenshot;
