@@ -23,12 +23,14 @@ class WindowDetector
 {
 public:
     /**
-     * @brief Return the top-level native window that contains @p globalLogicalPos.
+     * @brief Return the top-level native window that contains @p
+     * globalLogicalPos.
      *
-     * @param globalLogicalPos  Cursor position in Qt global logical coordinates.
-     * @param skipNativeId      Native window handle (HWND on Windows) to exclude
-     *                          from the search (typically the caller's own window).
-     *                          Pass 0 to skip no window.
+     * @param globalLogicalPos  Cursor position in Qt global logical
+     * coordinates.
+     * @param skipNativeId      Native window handle (HWND on Windows) to
+     * exclude from the search (typically the caller's own window). Pass 0 to
+     * skip no window.
      * @return WindowInfo with valid=true and the window geometry in Qt logical
      *         coordinates, or valid=false if no suitable window was found.
      */

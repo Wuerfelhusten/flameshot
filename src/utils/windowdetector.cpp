@@ -26,7 +26,8 @@
  */
 static QRect physicalToLogicalRect(const RECT& physRect, POINT physCursor)
 {
-    // QCursor::pos() returns the same point in logical (DPI-independent) coords.
+    // QCursor::pos() returns the same point in logical (DPI-independent)
+    // coords.
     const QPoint logCursor = QCursor::pos();
 
     // Find the Qt screen containing the logical cursor position.
@@ -38,26 +39,25 @@ static QRect physicalToLogicalRect(const RECT& physRect, POINT physCursor)
         // Last-resort: identity mapping
         return QRect(physRect.left,
                      physRect.top,
-                     physRect.right  - physRect.left,
+                     physRect.right - physRect.left,
                      physRect.bottom - physRect.top);
     }
 
     const QRect logGeom = screen->geometry();
-    const qreal dpr     = screen->devicePixelRatio();
+    const qreal dpr = screen->devicePixelRatio();
 
     // Derive the Win32 physical origin of this monitor from the two
     // representations of the cursor position:
     //   physCursor = physMonOrigin + (logCursor - logGeom.topLeft()) * dpr
     const qreal physMonOriginX =
-        physCursor.x - (logCursor.x() - logGeom.x()) * dpr;
+      physCursor.x - (logCursor.x() - logGeom.x()) * dpr;
     const qreal physMonOriginY =
-        physCursor.y - (logCursor.y() - logGeom.y()) * dpr;
+      physCursor.y - (logCursor.y() - logGeom.y()) * dpr;
 
-    return QRect(
-        logGeom.x() + qRound((physRect.left - physMonOriginX) / dpr),
-        logGeom.y() + qRound((physRect.top  - physMonOriginY) / dpr),
-        qRound((physRect.right  - physRect.left) / dpr),
-        qRound((physRect.bottom - physRect.top)  / dpr));
+    return QRect(logGeom.x() + qRound((physRect.left - physMonOriginX) / dpr),
+                 logGeom.y() + qRound((physRect.top - physMonOriginY) / dpr),
+                 qRound((physRect.right - physRect.left) / dpr),
+                 qRound((physRect.bottom - physRect.top) / dpr));
 }
 
 // ---------------------------------------------------------------------------
@@ -66,9 +66,9 @@ static QRect physicalToLogicalRect(const RECT& physRect, POINT physCursor)
 
 struct FindWindowData
 {
-    POINT pt;         ///< Physical cursor position to test.
-    HWND  skipHwnd;   ///< Window to skip (the caller's own window).
-    HWND  result;     ///< Set to the found window handle, or NULL.
+    POINT pt;      ///< Physical cursor position to test.
+    HWND skipHwnd; ///< Window to skip (the caller's own window).
+    HWND result;   ///< Set to the found window handle, or NULL.
 };
 
 static BOOL CALLBACK findTopLevelWindowAtPoint(HWND hwnd, LPARAM lParam)

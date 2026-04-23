@@ -1378,7 +1378,7 @@ void CaptureWidget::selectWindowAtCursor(const QPoint& widgetPos)
 #if defined(Q_OS_WIN)
     const QPoint globalPos = mapToGlobal(widgetPos);
     const quintptr ownId =
-        (isVisible() && window()) ? static_cast<quintptr>(window()->winId()) : 0;
+      (isVisible() && window()) ? static_cast<quintptr>(window()->winId()) : 0;
     const WindowInfo info = WindowDetector::windowAt(globalPos, ownId);
     if (!info.valid)
         return;
