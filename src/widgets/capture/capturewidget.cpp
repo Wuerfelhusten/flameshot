@@ -184,10 +184,9 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
 #endif
 
         // Always display on the selected screen (not spanning entire desktop)
-        if (selectedScreen == nullptr && ConfigHandler().captureAllMonitors()) {
+        if (selectedScreen == nullptr && m_config.captureAllMonitors()) {
             // Multi-monitor mode: span the full desktop geometry
-            ScreenGrabber deskGrabber;
-            QRect desktopGeom = deskGrabber.desktopGeometry();
+            QRect desktopGeom = grabber.desktopGeometry();
             move(desktopGeom.topLeft());
             resize(desktopGeom.size());
         } else {
@@ -208,11 +207,10 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
     QVector<QRect> areas;
     if (m_context.fullscreen) {
 #if !defined(Q_OS_MACOS)
-        if (ConfigHandler().captureAllMonitors()) {
+        if (m_config.captureAllMonitors()) {
             // Multi-monitor mode: register each screen as a separate area.
             // Coordinates are relative to the top-left of the full desktop.
-            ScreenGrabber deskGrabber;
-            QRect desktopGeom = deskGrabber.desktopGeometry();
+            QRect desktopGeom = grabber.desktopGeometry();
             for (QScreen* const screen : QGuiApplication::screens()) {
                 QRect r = screen->geometry();
 #if !defined(Q_OS_WIN)
