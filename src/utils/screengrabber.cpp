@@ -10,6 +10,7 @@
 #include <QEventLoop>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QImageReader>
 #include <QKeyEvent>
 #include <QLabel>
@@ -20,6 +21,7 @@
 #include <QScreen>
 #include <QTimer>
 #include <QWidget>
+#include <QtMath>
 #include <algorithm>
 
 #ifdef FLAMESHOT_DEBUG_CAPTURE
@@ -211,6 +213,7 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     ok = true;
     int wid = 0;
     QPixmap screenshot;
+    const bool hdrFix = ConfigHandler().hdrFix();
 
 #if defined(Q_OS_MACOS)
     QScreen* currentScreen = QGuiAppCurrentScreen().currentScreen();
@@ -223,6 +226,9 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
     screenshot = currentScreen->grabWindow(
       wid, geom.x(), geom.y(), geom.width(), geom.height());
     screenshot.setDevicePixelRatio(currentScreen->devicePixelRatio());
+    if (hdrFix) {
+        screenshot = applyHdrFix(screenshot);
+    }
     return screenshot;
 
 #elif defined(Q_OS_LINUX)
@@ -253,17 +259,26 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
         const QList<QScreen*> screens = QGuiApplication::screens();
         if (preSelectedMonitor < screens.size()) {
             m_selectedMonitor = preSelectedMonitor;
-            return cropToMonitor(screenshot, preSelectedMonitor);
+            QPixmap cropped = cropToMonitor(screenshot, preSelectedMonitor);
+            if (hdrFix) {
+                cropped = applyHdrFix(cropped);
+            }
+            return cropped;
         }
     }
 
-    return selectMonitorAndCrop(screenshot, ok);
+    QPixmap result = selectMonitorAndCrop(screenshot, ok);
+    if (ok && hdrFix) {
+        result = applyHdrFix(result);
+    }
+    return result;
 }
 
 QPixmap ScreenGrabber::grabFullDesktop(bool& ok)
 {
     ok = true;
     QPixmap screenshot;
+    const bool hdrFix = ConfigHandler().hdrFix();
 
 #if defined(Q_OS_MACOS)
     // On macOS, composite all screens into a single pixmap.
@@ -308,6 +323,9 @@ QPixmap ScreenGrabber::grabFullDesktop(bool& ok)
     screenshot = windowsScreenshot(0);
 #endif
 
+    if (ok && hdrFix) {
+        screenshot = applyHdrFix(screenshot);
+    }
     return screenshot;
 }
 
@@ -594,6 +612,36 @@ QPixmap ScreenGrabber::cropToMonitor(const QPixmap& fullScreenshot,
     cropped.setDevicePixelRatio(targetDpr);
 
     return cropped;
+}
+
+QPixmap ScreenGrabber::applyHdrFix(const QPixmap& pixmap)
+{
+    QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+
+    // Build a lookup table applying gamma = 2.2 to each channel value.
+    // On HDR-enabled screens, screenshots may be captured with linear-light
+    // values that appear too bright when interpreted as gamma-encoded sRGB.
+    // Applying pow(x, 2.2) maps the captured values to a perceptually correct
+    // range for SDR/sRGB display, effectively darkening the overly-bright result.
+    uchar lut[256];
+    for (int i = 0; i < 256; ++i) {
+        lut[i] = static_cast<uchar>(qRound(qPow(i / 255.0, 2.2) * 255.0));
+    }
+
+    for (int y = 0; y < image.height(); ++y) {
+        QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+        for (int x = 0; x < image.width(); ++x) {
+            const QRgb pixel = line[x];
+            line[x] = qRgba(lut[qRed(pixel)],
+                            lut[qGreen(pixel)],
+                            lut[qBlue(pixel)],
+                            qAlpha(pixel));
+        }
+    }
+
+    QPixmap result = QPixmap::fromImage(image);
+    result.setDevicePixelRatio(pixmap.devicePixelRatio());
+    return result;
 }
 
 QPixmap ScreenGrabber::windowsScreenshot(int wid)

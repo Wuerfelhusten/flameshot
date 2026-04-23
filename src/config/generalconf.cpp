@@ -54,6 +54,7 @@ GeneralConf::GeneralConf(QWidget* parent)
     initAntialiasingPinZoom();
     initUndoLimit();
     initInsecurePixelate();
+    initHdrFix();
 #if !defined(Q_OS_MACOS)
     initCaptureActiveMonitor();
 #endif
@@ -110,6 +111,7 @@ void GeneralConf::_updateComponents(bool allowEmptySavePath)
     m_squareMagnifier->setChecked(config.squareMagnifier());
     m_saveLastRegion->setChecked(config.saveLastRegion());
     m_reverseArrow->setChecked(config.reverseArrow());
+    m_hdrFix->setChecked(config.hdrFix());
     m_autoCloseIdleDaemon->setChecked(config.autoCloseIdleDaemon());
     m_predefinedColorPaletteLarge->setChecked(
       config.predefinedColorPaletteLarge());
@@ -873,6 +875,18 @@ void GeneralConf::initInsecurePixelate()
             &GeneralConf::setInsecurePixelate);
 }
 
+void GeneralConf::initHdrFix()
+{
+    m_hdrFix = new QCheckBox(tr("HDR fix (apply gamma correction)"), this);
+    m_hdrFix->setToolTip(
+      tr("Apply gamma correction to screenshots captured on HDR-enabled "
+         "screens. Enable this if your screenshots appear too bright."));
+    m_hdrFix->setChecked(ConfigHandler().hdrFix());
+    m_scrollAreaLayout->addWidget(m_hdrFix);
+
+    connect(m_hdrFix, &QCheckBox::clicked, this, &GeneralConf::setHdrFix);
+}
+
 void GeneralConf::setSelGeoHideTime(int v)
 {
     ConfigHandler().setValue("showSelectionGeometryHideTime", v);
@@ -912,6 +926,11 @@ void GeneralConf::setReverseArrow(bool checked)
 void GeneralConf::setInsecurePixelate(bool checked)
 {
     ConfigHandler().setInsecurePixelate(checked);
+}
+
+void GeneralConf::setHdrFix(bool checked)
+{
+    ConfigHandler().setHdrFix(checked);
 }
 
 #if !defined(Q_OS_MACOS)
