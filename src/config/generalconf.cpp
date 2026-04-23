@@ -57,6 +57,7 @@ GeneralConf::GeneralConf(QWidget* parent)
     initHdrFix();
 #if !defined(Q_OS_MACOS)
     initCaptureActiveMonitor();
+    initCaptureAllMonitors();
 #endif
 #if defined(Q_OS_LINUX)
     initUseX11LegacyScreenshot();
@@ -128,6 +129,7 @@ void GeneralConf::_updateComponents(bool allowEmptySavePath)
 
 #if !defined(Q_OS_MACOS)
     m_captureActiveMonitor->setChecked(config.captureActiveMonitor());
+    m_captureAllMonitors->setChecked(config.captureAllMonitors());
 #endif
 #if defined(Q_OS_LINUX)
     m_useX11LegacyScreenshot->setChecked(config.useX11LegacyScreenshot());
@@ -953,6 +955,28 @@ void GeneralConf::initCaptureActiveMonitor()
 void GeneralConf::captureActiveMonitorChanged(bool checked)
 {
     ConfigHandler().setCaptureActiveMonitor(checked);
+}
+
+void GeneralConf::initCaptureAllMonitors()
+{
+    m_captureAllMonitors =
+      new QCheckBox(tr("Capture all monitors (legacy multi-monitor mode)"), this);
+    m_captureAllMonitors->setToolTip(
+      tr("Skip the monitor selection dialog and capture all monitors as a "
+         "single composite screenshot. This restores the behaviour that "
+         "existed before the per-monitor capture was introduced."));
+    m_captureAllMonitors->setChecked(ConfigHandler().captureAllMonitors());
+    m_scrollAreaLayout->addWidget(m_captureAllMonitors);
+
+    connect(m_captureAllMonitors,
+            &QCheckBox::clicked,
+            this,
+            &GeneralConf::captureAllMonitorsChanged);
+}
+
+void GeneralConf::captureAllMonitorsChanged(bool checked)
+{
+    ConfigHandler().setCaptureAllMonitors(checked);
 }
 #endif
 

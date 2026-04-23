@@ -64,6 +64,7 @@ private slots:
     void setHdrFix(bool checked);
 #if !defined(Q_OS_MACOS)
     void captureActiveMonitorChanged(bool checked);
+    void captureAllMonitorsChanged(bool checked);
 #endif
 #if defined(Q_OS_LINUX)
     void useX11LegacyScreenshotChanged(bool checked);
@@ -109,6 +110,7 @@ private:
     void initHdrFix();
 #if !defined(Q_OS_MACOS)
     void initCaptureActiveMonitor();
+    void initCaptureAllMonitors();
 #endif
 #if defined(Q_OS_LINUX)
     void initUseX11LegacyScreenshot();
@@ -164,6 +166,7 @@ private:
     QCheckBox* m_hdrFix;
 #if !defined(Q_OS_MACOS)
     QCheckBox* m_captureActiveMonitor;
+    QCheckBox* m_captureAllMonitors;
 #endif
 #if defined(Q_OS_LINUX)
     QCheckBox* m_useX11LegacyScreenshot;

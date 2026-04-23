@@ -184,32 +184,60 @@ CaptureWidget::CaptureWidget(const CaptureRequest& req,
 #endif
 
         // Always display on the selected screen (not spanning entire desktop)
-        if (selectedScreen == nullptr) {
-            selectedScreen = QGuiApplication::primaryScreen();
-        }
-        QRect screenGeom = selectedScreen->geometry();
-        move(screenGeom.topLeft());
-        resize(screenGeom.size());
+        if (selectedScreen == nullptr && ConfigHandler().captureAllMonitors()) {
+            // Multi-monitor mode: span the full desktop geometry
+            ScreenGrabber deskGrabber;
+            QRect desktopGeom = deskGrabber.desktopGeometry();
+            move(desktopGeom.topLeft());
+            resize(desktopGeom.size());
+        } else {
+            if (selectedScreen == nullptr) {
+                selectedScreen = QGuiApplication::primaryScreen();
+            }
+            QRect screenGeom = selectedScreen->geometry();
+            move(screenGeom.topLeft());
+            resize(screenGeom.size());
 
-        if (selectedScreen != nullptr && windowHandle()) {
-            windowHandle()->setScreen(selectedScreen);
+            if (selectedScreen != nullptr && windowHandle()) {
+                windowHandle()->setScreen(selectedScreen);
+            }
         }
 #endif
     }
 
     QVector<QRect> areas;
     if (m_context.fullscreen) {
-        // Always display on a single screen, normalized to (0, 0)
-        QScreen* screenForAreas = selectedScreen;
-        if (!screenForAreas) {
-            screenForAreas = QGuiAppCurrentScreen().currentScreen();
+#if !defined(Q_OS_MACOS)
+        if (ConfigHandler().captureAllMonitors()) {
+            // Multi-monitor mode: register each screen as a separate area.
+            // Coordinates are relative to the top-left of the full desktop.
+            ScreenGrabber deskGrabber;
+            QRect desktopGeom = deskGrabber.desktopGeometry();
+            for (QScreen* const screen : QGuiApplication::screens()) {
+                QRect r = screen->geometry();
+#if !defined(Q_OS_WIN)
+                qreal dpr = screen->devicePixelRatio();
+                r.moveTo(QPointF(r.x() / dpr, r.y() / dpr).toPoint());
+#endif
+                r.moveTo(r.topLeft() - desktopGeom.topLeft());
+                areas.append(r);
+            }
+        } else {
+#endif
+            // Single-screen mode: normalise the selected screen to (0, 0)
+            QScreen* screenForAreas = selectedScreen;
+            if (!screenForAreas) {
+                screenForAreas = QGuiAppCurrentScreen().currentScreen();
+            }
+            if (!screenForAreas) {
+                screenForAreas = QGuiApplication::primaryScreen();
+            }
+            QRect r = screenForAreas ? screenForAreas->geometry() : QRect();
+            r.moveTo(0, 0);
+            areas.append(r);
+#if !defined(Q_OS_MACOS)
         }
-        if (!screenForAreas) {
-            screenForAreas = QGuiApplication::primaryScreen();
-        }
-        QRect r = screenForAreas ? screenForAreas->geometry() : QRect();
-        r.moveTo(0, 0);
-        areas.append(r);
+#endif
     } else {
         areas.append(rect());
     }

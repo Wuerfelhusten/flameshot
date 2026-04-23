@@ -267,6 +267,19 @@ QPixmap ScreenGrabber::grabEntireDesktop(bool& ok, int preSelectedMonitor)
         }
     }
 
+    // When the user has opted into capturing all monitors at once, return the
+    // full composite screenshot without showing the monitor selection dialog.
+#if !defined(Q_OS_MACOS)
+    if (ConfigHandler().captureAllMonitors()) {
+        // m_selectedMonitor stays -1 → getSelectedScreen() returns nullptr,
+        // which signals to CaptureWidget that all monitors are in use.
+        if (hdrFix) {
+            screenshot = applyHdrFix(screenshot);
+        }
+        return screenshot;
+    }
+#endif
+
     QPixmap result = selectMonitorAndCrop(screenshot, ok);
     if (ok && hdrFix) {
         result = applyHdrFix(result);
