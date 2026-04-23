@@ -158,6 +158,8 @@ private:
 
     QPoint snapToGrid(const QPoint& point) const;
 
+    void selectWindowAtCursor(const QPoint& widgetPos);
+
     ////////////////////////////////////////
     // Class members
 

@@ -43,6 +43,10 @@
 #include "widgets/updatenotificationwidget.h"
 #endif
 
+#if defined(Q_OS_WIN)
+#include "utils/windowdetector.h"
+#endif
+
 #define MOUSE_DISTANCE_TO_START_MOVING 3
 
 // CaptureWidget is the main component used to capture the screen. It contains
@@ -492,6 +496,9 @@ void CaptureWidget::initHelpMessage()
 {
     QList<QPair<QString, QString>> keyMap;
     keyMap << std::pair(tr("Mouse"), tr("Select screenshot area"));
+#if defined(Q_OS_WIN)
+    keyMap << std::pair(tr("Double Click"), tr("Select window under cursor"));
+#endif
     using CT = CaptureTool;
     for (auto toolType : { CT::TYPE_ACCEPT, CT::TYPE_SAVE, CT::TYPE_COPY }) {
         if (!m_tools.contains(toolType)) {
@@ -973,6 +980,12 @@ void CaptureWidget::mouseDoubleClickEvent(QMouseEvent* event)
             copyTool.pressed(m_context);
             qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         }
+#if defined(Q_OS_WIN)
+    } else if (event->button() == Qt::LeftButton && m_activeButton == nullptr) {
+        // Double-click outside the current selection (or with no selection):
+        // snap the selection to the native window under the cursor.
+        selectWindowAtCursor(event->pos());
+#endif
     }
 }
 
@@ -1359,6 +1372,42 @@ void CaptureWidget::showAppUpdateNotification(const QString& appLatestVersion,
     m_updateNotificationWidget->show();
 }
 #endif
+
+void CaptureWidget::selectWindowAtCursor(const QPoint& widgetPos)
+{
+#if defined(Q_OS_WIN)
+    const QPoint globalPos = mapToGlobal(widgetPos);
+    const quintptr ownId =
+        (isVisible() && window()) ? static_cast<quintptr>(window()->winId()) : 0;
+    const WindowInfo info = WindowDetector::windowAt(globalPos, ownId);
+    if (!info.valid)
+        return;
+
+    // Convert from global logical coords to widget-local coords and clamp to
+    // the visible capture area.
+    QRect selectionRect = info.geometry.translated(-m_context.widgetOffset);
+    // Trim the window rect slightly: 8 px narrower on each side, 12 px less
+    // at the bottom (title bar / shadow compensation).
+    selectionRect.adjust(8, 1, -8, -5);
+    selectionRect = selectionRect.intersected(rect());
+    if (selectionRect.isEmpty())
+        return;
+
+    if (m_selection->isVisible()) {
+        // Smoothly animate from the current selection to the window bounds.
+        m_selection->setGeometryAnimated(selectionRect);
+    } else {
+        // No existing selection – show immediately and emit geometrySettled so
+        // the button handler becomes visible.
+        m_selection->setGeometry(selectionRect);
+        m_selection->setVisible(true);
+        m_context.selection = extendedRect(m_selection->geometry());
+        emit m_selection->geometrySettled();
+    }
+#else
+    Q_UNUSED(widgetPos)
+#endif
+}
 
 void CaptureWidget::initSelection()
 {
