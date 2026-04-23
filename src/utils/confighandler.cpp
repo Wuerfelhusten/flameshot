@@ -143,6 +143,10 @@ static QMap<class QString, QSharedPointer<ValueHandler>>
     // Auto-select the monitor under the cursor instead of showing
     // the monitor selection UI. Not supported on Wayland.
     OPTION("captureActiveMonitor"         ,Bool               ( false         )),
+    // Capture all monitors as one composite screenshot, restoring the
+    // pre-#4498 multi-monitor behaviour. When enabled the monitor selection
+    // dialog is skipped and the full desktop is captured.
+    OPTION("captureAllMonitors"           ,Bool               ( false         )),
 #endif
 #if defined(Q_OS_LINUX)
     // Bypass freedesktop portal and use Qt's native X11

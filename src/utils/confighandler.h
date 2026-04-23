@@ -148,6 +148,7 @@ public:
 #endif
 #if !defined(Q_OS_MACOS)
     CONFIG_GETTER_SETTER(captureActiveMonitor, setCaptureActiveMonitor, bool)
+    CONFIG_GETTER_SETTER(captureAllMonitors, setCaptureAllMonitors, bool)
 #endif
 #if defined(Q_OS_LINUX)
     CONFIG_GETTER_SETTER(useX11LegacyScreenshot,
