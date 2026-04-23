@@ -635,7 +635,8 @@ QPixmap ScreenGrabber::applyHdrFix(const QPixmap& pixmap)
     // On HDR-enabled screens, screenshots may be captured with linear-light
     // values that appear too bright when interpreted as gamma-encoded sRGB.
     // Applying pow(x, 2.2) maps the captured values to a perceptually correct
-    // range for SDR/sRGB display, effectively darkening the overly-bright result.
+    // range for SDR/sRGB display, effectively darkening the overly-bright
+    // result.
     uchar lut[256];
     for (int i = 0; i < 256; ++i) {
         lut[i] = static_cast<uchar>(qRound(qPow(i / 255.0, 2.2) * 255.0));

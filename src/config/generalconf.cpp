@@ -959,8 +959,8 @@ void GeneralConf::captureActiveMonitorChanged(bool checked)
 
 void GeneralConf::initCaptureAllMonitors()
 {
-    m_captureAllMonitors =
-      new QCheckBox(tr("Capture all monitors (legacy multi-monitor mode)"), this);
+    m_captureAllMonitors = new QCheckBox(
+      tr("Capture all monitors (legacy multi-monitor mode)"), this);
     m_captureAllMonitors->setToolTip(
       tr("Skip the monitor selection dialog and capture all monitors as a "
          "single composite screenshot. This restores the behaviour that "
